@@ -5,7 +5,6 @@ databases:
   - name: database
     plan: free # Or your preferred plan
     postgresMajorVersion: "15"
-    diskSizeGB: 1
 
 services:
   # Backend Service (Node.js)
