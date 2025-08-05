@@ -1,42 +1,35 @@
 # Render Blueprint
 # See https://render.com/docs/blueprint-spec for details
-
-services:
+databases:
   # PostgreSQL Database
   - name: database
-    type: pserv
     plan: free # Or your preferred plan
-    postgres:
-      version: 15
-    disk:
-      name: postgres_data
-      sizeGB: 1
-      mountPath: /var/lib/postgresql/data
+    postgresMajorVersion: "15"
+    diskSizeGB: 1
 
+services:
   # Backend Service (Node.js)
   - name: backend
     type: web
     plan: free # Or your preferred plan
-    env: node
+    runtime: node
     rootDir: ./backend
     buildCommand: "npm install && npx prisma generate && npx prisma migrate deploy && npm run build"
     startCommand: "node dist/index.js"
     envVars:
       - key: DATABASE_URL
-        fromService:
-          type: pserv
+        fromDatabase:
           name: database
           property: connectionString
       - key: JWT_SECRET
         generateValue: true # Render will generate a secure secret
       - key: SECRET_KEY
         generateValue: true # Render will generate a secure secret
-
   # Frontend Service (Next.js)
   - name: frontend
     type: web
     plan: free # Or your preferred plan
-    env: node
+    runtime: node
     rootDir: ./frontend
     buildCommand: "npm install && npm run build"
     startCommand: "npm start"
