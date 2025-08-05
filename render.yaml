@@ -35,7 +35,4 @@ services:
     startCommand: "npm start"
     envVars:
       - key: NEXT_PUBLIC_GRAPHQL_ENDPOINT
-        fromService:
-          type: web
-          name: backend
-          property: url
+        value: "https://backend.onrender.com/graphql"
