@@ -1,0 +1,104 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String   // Wird als Hash gespeichert
+  apiKeys   ApiKey[]
+  teams     TeamMembership[]
+  auditLogs AuditLog[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  members   TeamMembership[]
+  apiKeys   ApiKey[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TeamMembership {
+  userId String
+  teamId String
+  role   String // z.B. "ADMIN", "MEMBER"
+  user   User   @relation(fields: [userId], references: [id])
+  team   Team   @relation(fields: [teamId], references: [id])
+
+  @@id([userId, teamId])
+}
+
+model ApiKey {
+  id             String         @id @default(cuid())
+  name           String
+  provider       String
+  encryptedKey   String         // AES-256 verschlüsselt
+  maskedKey      String         // z.B. sk-....ab12
+  status         String         @default("verifying") // verifying, active, invalid, expired
+  metadata       Json?          // z.B. { "scopes": ["read:user"], "model_access": ["gpt-4o"] }
+  expiresAt      DateTime?
+  userId         String?
+  teamId         String?
+  user           User?          @relation(fields: [userId], references: [id])
+  team           Team?          @relation(fields: [teamId], references: [id])
+  usageLogs      ApiUsageLog[]
+  securityAlerts SecurityAlert[]
+  costAlerts     CostAlert[]
+  auditLogs      AuditLog[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model ApiUsageLog {
+  id               String   @id @default(cuid())
+  apiKeyId         String
+  apiKey           ApiKey   @relation(fields: [apiKeyId], references: [id])
+  timestamp        DateTime @default(now())
+  statusCode       Int
+  responseTime     Int // in ms
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+}
+
+model SecurityAlert {
+  id        String   @id @default(cuid())
+  apiKeyId  String
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id])
+  type      String   // z.B. "ANOMALY_DETECTED"
+  details   String
+  status    String   @default("new") // new, ignored, resolved
+  createdAt DateTime @default(now())
+}
+
+model CostAlert {
+  id              String   @id @default(cuid())
+  apiKeyId        String
+  apiKey          ApiKey   @relation(fields: [apiKeyId], references: [id])
+  threshold       Float    // z.B. 100.00
+  period          String   // "monthly"
+  triggerPercent  Int      // z.B. 80
+  notification    String   // "email", "in-app"
+  createdAt       DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  apiKeyId  String
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   // z.B. "KEY_CREATED", "KEY_ROTATED"
+  details   String?
+  createdAt DateTime @default(now())
+}

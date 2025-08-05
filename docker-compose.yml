@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: api_wallet_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: "postgresql://myuser:mypassword@db:5432/api_wallet_db"
+      JWT_SECRET: "your-super-secret-key-for-docker"
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # This is the build-time variable for server-side rendering within the container
+        NEXT_PUBLIC_GRAPHQL_ENDPOINT: "http://backend:4000/graphql"
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # For local development, it remains localhost.
+      # For Render deployment, this will be automatically set to the backend's public URL.
+      NEXT_PUBLIC_GRAPHQL_ENDPOINT: ${RENDER_EXTERNAL_URL:-http://localhost:4000}/graphql
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
